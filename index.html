@@ -509,7 +509,7 @@
 
         <div class="card">
           <h3>Current Portfolio Items</h3>
-          <p>These are the latest items saved in your Supabase table.</p>
+          <p>These are the latest items saved in your Supabase table. Delete will also remove uploaded Supabase images from Storage.</p>
 
           <div id="itemsList" class="items">
             <p>Loading portfolio items...</p>
@@ -783,22 +783,67 @@
       loadPortfolioItems();
     }
 
+    function getStoragePathFromPublicUrl(publicUrl) {
+      if (!publicUrl) return null;
+
+      const marker = "/storage/v1/object/public/portfolio-media/";
+      const markerIndex = publicUrl.indexOf(marker);
+
+      if (markerIndex === -1) return null;
+
+      const path = publicUrl.slice(markerIndex + marker.length);
+      return decodeURIComponent(path.split("?")[0]);
+    }
+
     async function deletePortfolioItem(id) {
-      const confirmed = confirm("Delete this portfolio item from the database? This will not remove the image file from Storage yet.");
+      const confirmed = confirm("Delete this portfolio item? This will remove the portfolio record and delete its uploaded Supabase image if it has one. External video links will be removed from the website record only.");
 
       if (!confirmed) return;
 
-      const { error } = await supabaseClient
+      setStatus(uploadStatus, "Deleting portfolio item...");
+
+      const { data: item, error: fetchError } = await supabaseClient
+        .from("portfolio_items")
+        .select("id,title,image_url,video_url,media_type")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) {
+        setStatus(uploadStatus, fetchError.message, "error");
+        return;
+      }
+
+      const storagePath = getStoragePathFromPublicUrl(item.image_url);
+
+      if (storagePath) {
+        const { error: storageError } = await supabaseClient.storage
+          .from("portfolio-media")
+          .remove([storagePath]);
+
+        if (storageError) {
+          setStatus(uploadStatus, "Image could not be deleted from Storage: " + storageError.message, "error");
+          return;
+        }
+      }
+
+      const { error: deleteError } = await supabaseClient
         .from("portfolio_items")
         .delete()
         .eq("id", id);
 
-      if (error) {
-        setStatus(uploadStatus, error.message, "error");
+      if (deleteError) {
+        setStatus(uploadStatus, deleteError.message, "error");
         return;
       }
 
-      setStatus(uploadStatus, "Portfolio item deleted.", "success");
+      if (storagePath) {
+        setStatus(uploadStatus, "Portfolio item and uploaded image deleted successfully.", "success");
+      } else if (item.video_url) {
+        setStatus(uploadStatus, "Video portfolio item deleted successfully. External video file/link was not deleted from Google Drive, YouTube, or Vimeo.", "success");
+      } else {
+        setStatus(uploadStatus, "Portfolio item deleted successfully.", "success");
+      }
+
       loadPortfolioItems();
     }
 
