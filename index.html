@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Cereka Studio Admin Upload</title>
+
+  <style>
+    :root {
+      --bg: #050505;
+      --card: rgba(255,255,255,0.065);
+      --card-strong: rgba(255,255,255,0.095);
+      --line: rgba(255,255,255,0.14);
+      --text: #f7f7f7;
+      --muted: #aaa;
+      --accent: #d6a45d;
+      --danger: #ff5a5a;
+      --success: #64d98a;
+      --radius: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(214, 164, 93, 0.22), transparent 34%),
+        radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.08), transparent 30%),
+        #050505;
+      color: var(--text);
+      padding: 22px;
+    }
+
+    .wrap {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      min-height: calc(100vh - 44px);
+      display: grid;
+      place-items: center;
+    }
+
+    .panel {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: rgba(255,255,255,0.055);
+      box-shadow: 0 30px 90px rgba(0,0,0,0.48);
+      backdrop-filter: blur(16px);
+      overflow: hidden;
+    }
+
+    .login-panel {
+      max-width: 430px;
+      padding: 30px;
+    }
+
+    .dashboard-panel {
+      display: none;
+    }
+
+    .topbar {
+      padding: 22px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      background: rgba(0,0,0,0.22);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fff, var(--accent));
+      color: #050505;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+    }
+
+    h1, h2, h3, p {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+      font-size: 28px;
+      letter-spacing: -0.04em;
+    }
+
+    h2 {
+      margin-bottom: 8px;
+      font-size: 24px;
+      letter-spacing: -0.035em;
+    }
+
+    h3 {
+      margin-bottom: 14px;
+      font-size: 18px;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #ddd;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      min-height: 48px;
+      margin-bottom: 14px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      outline: none;
+      background: rgba(255,255,255,0.075);
+      color: white;
+      font-size: 15px;
+      font-family: inherit;
+    }
+
+    textarea {
+      min-height: 110px;
+      padding: 14px;
+      resize: vertical;
+    }
+
+    select option {
+      background: #101010;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #777;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.045);
+    }
+
+    .checkbox-row input {
+      width: 18px;
+      height: 18px;
+      min-height: auto;
+      margin: 0;
+    }
+
+    .checkbox-row label {
+      margin: 0;
+      font-weight: 700;
+      color: #ddd;
+    }
+
+    button {
+      min-height: 48px;
+      border: none;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #050505;
+      font-weight: 900;
+      cursor: pointer;
+      padding: 0 20px;
+      transition: transform 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
+    }
+
+    button:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-full {
+      width: 100%;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.22);
+    }
+
+    .btn-danger {
+      background: rgba(255,90,90,0.12);
+      border: 1px solid rgba(255,90,90,0.35);
+      color: #fff;
+    }
+
+    .content {
+      padding: 22px;
+      display: grid;
+      grid-template-columns: 0.85fr 1.15fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(0,0,0,0.23);
+      padding: 22px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0 12px;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    .status {
+      margin-top: 14px;
+      min-height: 20px;
+      font-size: 14px;
+      color: var(--accent);
+      line-height: 1.5;
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .status.success {
+      color: var(--success);
+    }
+
+    .preview-box {
+      width: 100%;
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed rgba(255,255,255,0.2);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      color: #777;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .preview-box img {
+      width: 100%;
+      height: 100%;
+      max-height: 360px;
+      object-fit: cover;
+      display: none;
+    }
+
+    .items {
+      display: grid;
+      gap: 12px;
+      max-height: 620px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: 86px 1fr;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .thumb {
+      width: 86px;
+      height: 86px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .item strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+
+    .item small {
+      display: block;
+      color: #888;
+      margin-bottom: 8px;
+      line-height: 1.35;
+    }
+
+    .item-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .item-actions button {
+      min-height: 34px;
+      padding: 0 12px;
+      font-size: 12px;
+    }
+
+    .badge {
+      display: inline-flex;
+      margin-right: 5px;
+      margin-bottom: 5px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(214,164,93,0.13);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .note {
+      padding: 14px;
+      border: 1px solid rgba(214,164,93,0.25);
+      border-radius: 16px;
+      background: rgba(214,164,93,0.08);
+      margin-bottom: 16px;
+      color: #d7c2a1;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 820px) {
+      body {
+        padding: 12px;
+      }
+
+      .wrap {
+        min-height: calc(100vh - 24px);
+      }
+
+      .topbar {
+        display: grid;
+      }
+
+      .content,
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .item {
+        grid-template-columns: 74px 1fr;
+      }
+
+      .thumb {
+        width: 74px;
+        height: 74px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <section id="loginPanel" class="panel login-panel">
+      <h1>Cereka Studio Admin</h1>
+      <p>Login to upload and manage your portfolio items.</p>
+
+      <form id="loginForm">
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="your@email.com" required />
+
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Your password" required />
+
+        <button class="btn-full" type="submit">Login</button>
+      </form>
+
+      <div id="loginStatus" class="status"></div>
+    </section>
+
+    <section id="dashboardPanel" class="panel dashboard-panel">
+      <div class="topbar">
+        <div class="brand">
+          <div class="logo">CS</div>
+          <div>
+            <h2>Cereka Studio Dashboard</h2>
+            <p id="welcomeText">Logged in</p>
+          </div>
+        </div>
+
+        <button id="logoutBtn" class="btn-outline" type="button">Logout</button>
+      </div>
+
+      <div class="content">
+        <div class="card">
+          <h3>Add Portfolio Item</h3>
+
+          <div class="note">
+            For images: upload a photo. For video: paste a Google Drive, YouTube, or Vimeo link. You can also add both if you want an image thumbnail with a video link.
+          </div>
+
+          <form id="portfolioForm">
+            <div class="form-grid">
+              <div class="full">
+                <label for="title">Project Title</label>
+                <input id="title" type="text" placeholder="Example: Wedding Highlight" required />
+              </div>
+
+              <div>
+                <label for="category">Category</label>
+                <select id="category">
+                  <option value="Event">Event</option>
+                  <option value="Portrait">Portrait</option>
+                  <option value="Wedding">Wedding</option>
+                  <option value="Video">Video</option>
+                  <option value="Brand">Brand</option>
+                  <option value="Graduation">Graduation</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="mediaType">Media Type</label>
+                <select id="mediaType">
+                  <option value="image">Image</option>
+                  <option value="video">Video</option>
+                </select>
+              </div>
+
+              <div class="full">
+                <label for="description">Description</label>
+                <textarea id="description" placeholder="Short description for this portfolio item"></textarea>
+              </div>
+
+              <div class="full">
+                <label for="imageFile">Upload Image</label>
+                <input id="imageFile" type="file" accept="image/*" />
+              </div>
+
+              <div class="full">
+                <div class="preview-box" id="previewBox">
+                  <span id="previewText">Image preview will appear here</span>
+                  <img id="imagePreview" alt="Selected image preview" />
+                </div>
+              </div>
+
+              <div class="full">
+                <label for="videoUrl">Video URL</label>
+                <input id="videoUrl" type="url" placeholder="Google Drive / YouTube / Vimeo link" />
+              </div>
+
+              <div class="checkbox-row">
+                <input id="isFeatured" type="checkbox" />
+                <label for="isFeatured">Feature on homepage</label>
+              </div>
+
+              <div class="checkbox-row">
+                <input id="isVisible" type="checkbox" checked />
+                <label for="isVisible">Visible on website</label>
+              </div>
+
+              <div class="full">
+                <button id="saveBtn" class="btn-full" type="submit">Save Portfolio Item</button>
+              </div>
+            </div>
+          </form>
+
+          <div id="uploadStatus" class="status"></div>
+        </div>
+
+        <div class="card">
+          <h3>Current Portfolio Items</h3>
+          <p>These are the latest items saved in your Supabase table.</p>
+
+          <div id="itemsList" class="items">
+            <p>Loading portfolio items...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const SUPABASE_URL = "https://aqcjxykchgefwdbtjcvz.supabase.co";
+
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxY2p4eWtjaGdlZndkYnRqY3Z6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5Nzk2MzcsImV4cCI6MjA5NTU1NTYzN30.oP-7acmK7Tj5whjAw_BqNi0KNRoGUReRP3f4XDT_ld0";
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const loginPanel = document.getElementById("loginPanel");
+    const dashboardPanel = document.getElementById("dashboardPanel");
+    const loginForm = document.getElementById("loginForm");
+    const loginStatus = document.getElementById("loginStatus");
+    const welcomeText = document.getElementById("welcomeText");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    const portfolioForm = document.getElementById("portfolioForm");
+    const uploadStatus = document.getElementById("uploadStatus");
+    const saveBtn = document.getElementById("saveBtn");
+    const imageFile = document.getElementById("imageFile");
+    const imagePreview = document.getElementById("imagePreview");
+    const previewText = document.getElementById("previewText");
+    const itemsList = document.getElementById("itemsList");
+
+    function setStatus(element, message, type = "") {
+      element.textContent = message;
+      element.className = "status";
+      if (type) element.classList.add(type);
+    }
+
+    function showLogin() {
+      loginPanel.style.display = "block";
+      dashboardPanel.style.display = "none";
+    }
+
+    function showDashboard(email) {
+      loginPanel.style.display = "none";
+      dashboardPanel.style.display = "block";
+      welcomeText.textContent = `Logged in as ${email}`;
+      loadPortfolioItems();
+    }
+
+    async function checkSession() {
+      const { data, error } = await supabaseClient.auth.getSession();
+
+      if (error) {
+        setStatus(loginStatus, error.message, "error");
+        showLogin();
+        return;
+      }
+
+      if (data.session) {
+        showDashboard(data.session.user.email);
+      } else {
+        showLogin();
+      }
+    }
+
+    loginForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      setStatus(loginStatus, "Logging in...");
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        setStatus(loginStatus, error.message, "error");
+        return;
+      }
+
+      loginForm.reset();
+      setStatus(loginStatus, "");
+      showDashboard(data.user.email);
+    });
+
+    logoutBtn.addEventListener("click", async function () {
+      await supabaseClient.auth.signOut();
+      showLogin();
+      setStatus(loginStatus, "Logged out.");
+    });
+
+    imageFile.addEventListener("change", function () {
+      const file = imageFile.files[0];
+
+      if (!file) {
+        imagePreview.style.display = "none";
+        previewText.style.display = "block";
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      imagePreview.src = objectUrl;
+      imagePreview.style.display = "block";
+      previewText.style.display = "none";
+    });
+
+    async function uploadImage(file) {
+      const cleanName = file.name
+        .toLowerCase()
+        .replace(/[^a-z0-9.-]/g, "-")
+        .replace(/-+/g, "-");
+
+      const filePath = `portfolio/${Date.now()}-${cleanName}`;
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from("portfolio-media")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: publicUrlData } = supabaseClient.storage
+        .from("portfolio-media")
+        .getPublicUrl(filePath);
+
+      return publicUrlData.publicUrl;
+    }
+
+    portfolioForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      saveBtn.disabled = true;
+      setStatus(uploadStatus, "Saving portfolio item...");
+
+      try {
+        const title = document.getElementById("title").value.trim();
+        const description = document.getElementById("description").value.trim();
+        const category = document.getElementById("category").value;
+        const mediaType = document.getElementById("mediaType").value;
+        const videoUrl = document.getElementById("videoUrl").value.trim();
+        const isFeatured = document.getElementById("isFeatured").checked;
+        const isVisible = document.getElementById("isVisible").checked;
+        const file = imageFile.files[0];
+
+        if (!title) {
+          throw new Error("Please enter a project title.");
+        }
+
+        if (mediaType === "image" && !file) {
+          throw new Error("Please upload an image for image portfolio item.");
+        }
+
+        if (mediaType === "video" && !videoUrl && !file) {
+          throw new Error("For video item, add a video URL or upload an image thumbnail.");
+        }
+
+        let imageUrl = null;
+
+        if (file) {
+          setStatus(uploadStatus, "Uploading image to Supabase Storage...");
+          imageUrl = await uploadImage(file);
+        }
+
+        setStatus(uploadStatus, "Saving details into portfolio_items table...");
+
+        const { error: insertError } = await supabaseClient
+          .from("portfolio_items")
+          .insert({
+            title,
+            description,
+            category,
+            media_type: mediaType,
+            image_url: imageUrl,
+            video_url: videoUrl || null,
+            is_featured: isFeatured,
+            is_visible: isVisible
+          });
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        portfolioForm.reset();
+        imagePreview.src = "";
+        imagePreview.style.display = "none";
+        previewText.style.display = "block";
+        document.getElementById("isVisible").checked = true;
+
+        setStatus(uploadStatus, "Portfolio item saved successfully.", "success");
+        await loadPortfolioItems();
+      } catch (error) {
+        setStatus(uploadStatus, error.message || "Something went wrong.", "error");
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    async function loadPortfolioItems() {
+      itemsList.innerHTML = "<p>Loading portfolio items...</p>";
+
+      const { data, error } = await supabaseClient
+        .from("portfolio_items")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) {
+        itemsList.innerHTML = `<p style="color:#ff5a5a;">${error.message}</p>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        itemsList.innerHTML = "<p>No portfolio items yet.</p>";
+        return;
+      }
+
+      itemsList.innerHTML = data.map(function (item) {
+        const image = item.image_url
+          ? `<img src="${item.image_url}" alt="${escapeHtml(item.title)}">`
+          : "";
+
+        const visible = item.is_visible ? "Visible" : "Hidden";
+        const featured = item.is_featured ? "Featured" : "Not Featured";
+
+        return `
+          <article class="item">
+            <div class="thumb">${image}</div>
+            <div>
+              <strong>${escapeHtml(item.title)}</strong>
+              <small>${escapeHtml(item.description || "No description")}</small>
+              <span class="badge">${escapeHtml(item.category || "Other")}</span>
+              <span class="badge">${escapeHtml(item.media_type || "image")}</span>
+              <span class="badge">${visible}</span>
+              <span class="badge">${featured}</span>
+
+              <div class="item-actions">
+                <button type="button" class="btn-outline" onclick="toggleVisibility('${item.id}', ${item.is_visible})">
+                  ${item.is_visible ? "Hide" : "Show"}
+                </button>
+                <button type="button" class="btn-danger" onclick="deletePortfolioItem('${item.id}')">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    async function toggleVisibility(id, currentVisibility) {
+      const { error } = await supabaseClient
+        .from("portfolio_items")
+        .update({ is_visible: !currentVisibility })
+        .eq("id", id);
+
+      if (error) {
+        setStatus(uploadStatus, error.message, "error");
+        return;
+      }
+
+      setStatus(uploadStatus, "Visibility updated.", "success");
+      loadPortfolioItems();
+    }
+
+    async function deletePortfolioItem(id) {
+      const confirmed = confirm("Delete this portfolio item from the database? This will not remove the image file from Storage yet.");
+
+      if (!confirmed) return;
+
+      const { error } = await supabaseClient
+        .from("portfolio_items")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        setStatus(uploadStatus, error.message, "error");
+        return;
+      }
+
+      setStatus(uploadStatus, "Portfolio item deleted.", "success");
+      loadPortfolioItems();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    checkSession();
+  </script>
+</body>
+</html>
