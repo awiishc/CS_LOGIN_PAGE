@@ -400,6 +400,51 @@
       display: block;
     }
 
+
+    .package-list {
+      display: grid;
+      gap: 12px;
+      max-height: 760px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .package-admin-card {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.045);
+    }
+
+    .package-admin-card strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .package-admin-card .package-price {
+      color: var(--accent);
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .package-admin-card p {
+      margin-bottom: 10px;
+    }
+
+    .package-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .package-actions button {
+      min-height: 36px;
+      padding: 0 13px;
+      font-size: 12px;
+    }
+
     .booking-list {
       display: grid;
       gap: 12px;
@@ -479,6 +524,7 @@
 
     @media (max-width: 820px) {
       #portfolioTab .content { grid-template-columns: 1fr !important; }
+      #packagesTab .content { grid-template-columns: 1fr !important; }
 
       body {
         padding: 12px;
@@ -546,6 +592,7 @@
           <div class="tabs">
             <button class="tab-btn active" type="button" data-tab="portfolioTab">Portfolio Manager</button>
             <button class="tab-btn" type="button" data-tab="bookingsTab">Booking Requests</button>
+            <button class="tab-btn" type="button" data-tab="packagesTab">Package Editor</button>
           </div>
         </div>
 
@@ -653,6 +700,59 @@
             <div id="bookingRequestsList" class="booking-list">
               <p>Loading booking requests...</p>
             </div>
+
+        <div id="packagesTab" class="tab-section full">
+          <div class="content" style="padding:0;grid-template-columns:0.85fr 1.15fr;">
+            <div class="card">
+              <h3>Add / Edit Package</h3>
+
+              <div class="note">
+                Use one line per included item. Example: Edited final photos, online delivery link, short highlight film.
+              </div>
+
+              <form id="packageForm">
+                <input id="packageId" type="hidden" />
+
+                <label for="packageTitle">Package Title</label>
+                <input id="packageTitle" type="text" placeholder="Example: Event Coverage" required />
+
+                <label for="packagePrice">Price</label>
+                <input id="packagePrice" type="text" placeholder="Example: RM 500+ / Custom" />
+
+                <label for="packageDescription">Description</label>
+                <textarea id="packageDescription" placeholder="Short package description"></textarea>
+
+                <label for="packageIncludes">Includes</label>
+                <textarea id="packageIncludes" placeholder="1 shooting session&#10;Edited final photos&#10;Online delivery link"></textarea>
+
+                <div class="checkbox-row">
+                  <input id="packageVisible" type="checkbox" checked />
+                  <label for="packageVisible">Visible on website</label>
+                </div>
+
+                <button id="packageSaveBtn" class="btn-full" type="submit">Save Package</button>
+                <button id="packageCancelEditBtn" class="btn-full btn-outline hidden" type="button" style="margin-top:10px;">Cancel Edit</button>
+              </form>
+
+              <div id="packageAdminStatus" class="status"></div>
+            </div>
+
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+                <div>
+                  <h3>Current Packages</h3>
+                  <p>These packages appear on your public website when visible.</p>
+                </div>
+                <button id="refreshPackagesBtn" class="btn-outline" type="button">Refresh</button>
+              </div>
+
+              <div id="packagesAdminList" class="package-list">
+                <p>Loading packages...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
           </div>
         </div>
       </div>
@@ -687,6 +787,18 @@
     const bookingRequestsList = document.getElementById("bookingRequestsList");
     const bookingAdminStatus = document.getElementById("bookingAdminStatus");
     const refreshBookingsBtn = document.getElementById("refreshBookingsBtn");
+    const packageForm = document.getElementById("packageForm");
+    const packageId = document.getElementById("packageId");
+    const packageTitle = document.getElementById("packageTitle");
+    const packagePrice = document.getElementById("packagePrice");
+    const packageDescription = document.getElementById("packageDescription");
+    const packageIncludes = document.getElementById("packageIncludes");
+    const packageVisible = document.getElementById("packageVisible");
+    const packageSaveBtn = document.getElementById("packageSaveBtn");
+    const packageCancelEditBtn = document.getElementById("packageCancelEditBtn");
+    const packagesAdminList = document.getElementById("packagesAdminList");
+    const packageAdminStatus = document.getElementById("packageAdminStatus");
+    const refreshPackagesBtn = document.getElementById("refreshPackagesBtn");
 
     function setStatus(element, message, type = "") {
       element.textContent = message;
@@ -705,6 +817,7 @@
       welcomeText.textContent = `Logged in as ${email}`;
       loadPortfolioItems();
       loadBookingRequests();
+      loadAdminPackages();
     }
 
     async function checkSession() {
@@ -1021,6 +1134,10 @@
         if (targetId === "bookingsTab") {
           loadBookingRequests();
         }
+
+        if (targetId === "packagesTab") {
+          loadAdminPackages();
+        }
       });
     });
 
@@ -1142,6 +1259,191 @@
 
       setBookingAdminStatus("Booking request deleted.", "success");
       loadBookingRequests();
+    }
+
+
+
+    if (refreshPackagesBtn) {
+      refreshPackagesBtn.addEventListener("click", loadAdminPackages);
+    }
+
+    if (packageCancelEditBtn) {
+      packageCancelEditBtn.addEventListener("click", resetPackageForm);
+    }
+
+    function setPackageAdminStatus(message, type = "") {
+      if (!packageAdminStatus) return;
+      packageAdminStatus.textContent = message;
+      packageAdminStatus.className = "status";
+      if (type) packageAdminStatus.classList.add(type);
+    }
+
+    function resetPackageForm() {
+      if (!packageForm) return;
+      packageForm.reset();
+      packageId.value = "";
+      packageVisible.checked = true;
+      packageSaveBtn.textContent = "Save Package";
+      packageCancelEditBtn.classList.add("hidden");
+      setPackageAdminStatus("");
+    }
+
+    async function loadAdminPackages() {
+      if (!packagesAdminList) return;
+
+      packagesAdminList.innerHTML = "<p>Loading packages...</p>";
+
+      const { data, error } = await supabaseClient
+        .from("packages")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        packagesAdminList.innerHTML = `<p style="color:#ff5a5a;">${escapeHtml(error.message)}</p>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        packagesAdminList.innerHTML = "<p>No packages yet.</p>";
+        return;
+      }
+
+      packagesAdminList.innerHTML = data.map(function(pkg) {
+        const visible = pkg.is_visible ? "Visible" : "Hidden";
+        const includesList = String(pkg.includes || "")
+          .split(/\n|,/)
+          .map(item => item.trim())
+          .filter(Boolean);
+
+        const includesHtml = includesList.length
+          ? `<small>${includesList.map(item => `• ${escapeHtml(item)}`).join("<br>")}</small>`
+          : `<small>No included items.</small>`;
+
+        return `
+          <article class="package-admin-card">
+            <strong>${escapeHtml(pkg.title || "Untitled Package")}</strong>
+            <div class="package-price">${escapeHtml(pkg.price || "Custom")}</div>
+            <p>${escapeHtml(pkg.description || "No description")}</p>
+            ${includesHtml}
+            <div style="margin-top:10px;">
+              <span class="badge">${visible}</span>
+            </div>
+            <div class="package-actions">
+              <button type="button" class="btn-outline" onclick="editPackage('${pkg.id}')">Edit</button>
+              <button type="button" class="btn-outline" onclick="togglePackageVisibility('${pkg.id}', ${pkg.is_visible})">${pkg.is_visible ? "Hide" : "Show"}</button>
+              <button type="button" class="btn-danger" onclick="deletePackage('${pkg.id}')">Delete</button>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    if (packageForm) {
+      packageForm.addEventListener("submit", async function(event) {
+        event.preventDefault();
+
+        packageSaveBtn.disabled = true;
+        setPackageAdminStatus("Saving package...");
+
+        try {
+          const payload = {
+            title: packageTitle.value.trim(),
+            price: packagePrice.value.trim() || null,
+            description: packageDescription.value.trim() || null,
+            includes: packageIncludes.value.trim() || null,
+            is_visible: packageVisible.checked
+          };
+
+          if (!payload.title) {
+            throw new Error("Please enter a package title.");
+          }
+
+          let error;
+
+          if (packageId.value) {
+            const result = await supabaseClient
+              .from("packages")
+              .update(payload)
+              .eq("id", packageId.value);
+            error = result.error;
+          } else {
+            const result = await supabaseClient
+              .from("packages")
+              .insert(payload);
+            error = result.error;
+          }
+
+          if (error) throw error;
+
+          resetPackageForm();
+          setPackageAdminStatus("Package saved successfully.", "success");
+          loadAdminPackages();
+        } catch (error) {
+          setPackageAdminStatus(error.message || "Could not save package.", "error");
+        } finally {
+          packageSaveBtn.disabled = false;
+        }
+      });
+    }
+
+    async function editPackage(id) {
+      setPackageAdminStatus("Loading package...");
+
+      const { data, error } = await supabaseClient
+        .from("packages")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        setPackageAdminStatus(error.message, "error");
+        return;
+      }
+
+      packageId.value = data.id;
+      packageTitle.value = data.title || "";
+      packagePrice.value = data.price || "";
+      packageDescription.value = data.description || "";
+      packageIncludes.value = data.includes || "";
+      packageVisible.checked = Boolean(data.is_visible);
+      packageSaveBtn.textContent = "Update Package";
+      packageCancelEditBtn.classList.remove("hidden");
+      setPackageAdminStatus("Editing package. Save to update.", "success");
+      packageTitle.focus();
+    }
+
+    async function togglePackageVisibility(id, currentVisibility) {
+      const { error } = await supabaseClient
+        .from("packages")
+        .update({ is_visible: !currentVisibility })
+        .eq("id", id);
+
+      if (error) {
+        setPackageAdminStatus(error.message, "error");
+        return;
+      }
+
+      setPackageAdminStatus("Package visibility updated.", "success");
+      loadAdminPackages();
+    }
+
+    async function deletePackage(id) {
+      const confirmed = confirm("Delete this package?");
+
+      if (!confirmed) return;
+
+      const { error } = await supabaseClient
+        .from("packages")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        setPackageAdminStatus(error.message, "error");
+        return;
+      }
+
+      setPackageAdminStatus("Package deleted.", "success");
+      loadAdminPackages();
     }
 
 
