@@ -593,6 +593,7 @@
             <button class="tab-btn active" type="button" data-tab="portfolioTab">Portfolio Manager</button>
             <button class="tab-btn" type="button" data-tab="bookingsTab">Booking Requests</button>
             <button class="tab-btn" type="button" data-tab="packagesTab">Package Editor</button>
+            <button class="tab-btn" type="button" data-tab="settingsTab">Website Settings</button>
           </div>
         </div>
 
@@ -754,7 +755,76 @@
             </div>
           </div>
         </div>
-      </div>      </div>
+      </div>
+
+        <div id="settingsTab" class="tab-section full">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+              <div>
+                <h3>Website Settings</h3>
+                <p>Update your main website text, contact details, and social links without editing HTML.</p>
+              </div>
+              <button id="refreshSettingsBtn" class="btn-outline" type="button">Refresh</button>
+            </div>
+
+            <form id="settingsForm">
+              <div class="form-grid">
+                <div class="full">
+                  <label for="settingsBusinessName">Business Name</label>
+                  <input id="settingsBusinessName" type="text" placeholder="Cereka Studio" required />
+                </div>
+
+                <div class="full">
+                  <label for="settingsHeroTitle">Hero Title</label>
+                  <input id="settingsHeroTitle" type="text" placeholder="Visual stories for moments that matter." />
+                </div>
+
+                <div class="full">
+                  <label for="settingsHeroSubtitle">Hero Subtitle</label>
+                  <textarea id="settingsHeroSubtitle" placeholder="Premium photography and cinematic videography..."></textarea>
+                </div>
+
+                <div>
+                  <label for="settingsWhatsapp">WhatsApp Number</label>
+                  <input id="settingsWhatsapp" type="text" placeholder="+60XXXXXXXXX" />
+                </div>
+
+                <div>
+                  <label for="settingsEmail">Email</label>
+                  <input id="settingsEmail" type="email" placeholder="hello@cerekastudio.com" />
+                </div>
+
+                <div>
+                  <label for="settingsLocation">Location</label>
+                  <input id="settingsLocation" type="text" placeholder="Malaysia" />
+                </div>
+
+                <div>
+                  <label for="settingsInstagram">Instagram Link</label>
+                  <input id="settingsInstagram" type="url" placeholder="https://instagram.com/..." />
+                </div>
+
+                <div>
+                  <label for="settingsTiktok">TikTok Link</label>
+                  <input id="settingsTiktok" type="url" placeholder="https://tiktok.com/@..." />
+                </div>
+
+                <div class="full">
+                  <label for="settingsFooterText">Footer Text</label>
+                  <input id="settingsFooterText" type="text" placeholder="© 2026 Cereka Studio. All rights reserved." />
+                </div>
+
+                <div class="full">
+                  <button id="settingsSaveBtn" class="btn-full" type="submit">Save Website Settings</button>
+                </div>
+              </div>
+            </form>
+
+            <div id="settingsAdminStatus" class="status"></div>
+          </div>
+        </div>
+
+      </div>
     </section>
   </div>
 
@@ -798,6 +868,19 @@
     const packagesAdminList = document.getElementById("packagesAdminList");
     const packageAdminStatus = document.getElementById("packageAdminStatus");
     const refreshPackagesBtn = document.getElementById("refreshPackagesBtn");
+    const settingsForm = document.getElementById("settingsForm");
+    const settingsBusinessName = document.getElementById("settingsBusinessName");
+    const settingsHeroTitle = document.getElementById("settingsHeroTitle");
+    const settingsHeroSubtitle = document.getElementById("settingsHeroSubtitle");
+    const settingsWhatsapp = document.getElementById("settingsWhatsapp");
+    const settingsEmail = document.getElementById("settingsEmail");
+    const settingsLocation = document.getElementById("settingsLocation");
+    const settingsInstagram = document.getElementById("settingsInstagram");
+    const settingsTiktok = document.getElementById("settingsTiktok");
+    const settingsFooterText = document.getElementById("settingsFooterText");
+    const settingsSaveBtn = document.getElementById("settingsSaveBtn");
+    const settingsAdminStatus = document.getElementById("settingsAdminStatus");
+    const refreshSettingsBtn = document.getElementById("refreshSettingsBtn");
 
     function setStatus(element, message, type = "") {
       element.textContent = message;
@@ -817,6 +900,7 @@
       loadPortfolioItems();
       loadBookingRequests();
       loadAdminPackages();
+      loadWebsiteSettings();
     }
 
     async function checkSession() {
@@ -1137,6 +1221,10 @@
         if (targetId === "packagesTab") {
           loadAdminPackages();
         }
+
+        if (targetId === "settingsTab") {
+          loadWebsiteSettings();
+        }
       });
     });
 
@@ -1443,6 +1531,85 @@
 
       setPackageAdminStatus("Package deleted.", "success");
       loadAdminPackages();
+    }
+
+
+
+    if (refreshSettingsBtn) {
+      refreshSettingsBtn.addEventListener("click", loadWebsiteSettings);
+    }
+
+    function setSettingsAdminStatus(message, type = "") {
+      if (!settingsAdminStatus) return;
+      settingsAdminStatus.textContent = message;
+      settingsAdminStatus.className = "status";
+      if (type) settingsAdminStatus.classList.add(type);
+    }
+
+    async function loadWebsiteSettings() {
+      if (!settingsForm) return;
+
+      setSettingsAdminStatus("Loading website settings...");
+
+      const { data, error } = await supabaseClient
+        .from("site_settings")
+        .select("*")
+        .eq("id", 1)
+        .single();
+
+      if (error) {
+        setSettingsAdminStatus(error.message, "error");
+        return;
+      }
+
+      settingsBusinessName.value = data.business_name || "";
+      settingsHeroTitle.value = data.hero_title || "";
+      settingsHeroSubtitle.value = data.hero_subtitle || "";
+      settingsWhatsapp.value = data.whatsapp_number || "";
+      settingsEmail.value = data.email || "";
+      settingsLocation.value = data.location || "";
+      settingsInstagram.value = data.instagram_link || "";
+      settingsTiktok.value = data.tiktok_link || "";
+      settingsFooterText.value = data.footer_text || "";
+
+      setSettingsAdminStatus("Website settings loaded.", "success");
+    }
+
+    if (settingsForm) {
+      settingsForm.addEventListener("submit", async function(event) {
+        event.preventDefault();
+
+        settingsSaveBtn.disabled = true;
+        setSettingsAdminStatus("Saving website settings...");
+
+        try {
+          const payload = {
+            business_name: settingsBusinessName.value.trim() || "Cereka Studio",
+            hero_title: settingsHeroTitle.value.trim() || null,
+            hero_subtitle: settingsHeroSubtitle.value.trim() || null,
+            whatsapp_number: settingsWhatsapp.value.trim() || null,
+            email: settingsEmail.value.trim() || null,
+            location: settingsLocation.value.trim() || null,
+            instagram_link: settingsInstagram.value.trim() || null,
+            tiktok_link: settingsTiktok.value.trim() || null,
+            footer_text: settingsFooterText.value.trim() || null,
+            updated_at: new Date().toISOString()
+          };
+
+          const { error } = await supabaseClient
+            .from("site_settings")
+            .update(payload)
+            .eq("id", 1);
+
+          if (error) throw error;
+
+          setSettingsAdminStatus("Website settings saved successfully.", "success");
+        } catch (error) {
+          setSettingsAdminStatus(error.message || "Could not save website settings.", "error");
+        } finally {
+          settingsSaveBtn.disabled = false;
+        }
+      });
     }
 
 
