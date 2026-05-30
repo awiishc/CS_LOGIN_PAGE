@@ -357,6 +357,27 @@
       display: none !important;
     }
 
+
+    .edit-mode-note {
+      display: none;
+      padding: 12px 14px;
+      border: 1px solid rgba(100,217,138,0.28);
+      border-radius: 14px;
+      background: rgba(100,217,138,0.08);
+      color: var(--success);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+    .edit-mode-note.active { display: block; }
+    .order-controls { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .order-controls button { min-height:32px; padding:0 11px; font-size:12px; }
+    .current-image-note {
+      display:none; color:#aaa; font-size:12px; line-height:1.5;
+      margin-top:-6px; margin-bottom:12px;
+    }
+    .current-image-note.active { display:block; }
+
     .note {
       padding: 14px;
       border: 1px solid rgba(214,164,93,0.25);
@@ -600,13 +621,20 @@
         <div id="portfolioTab" class="tab-section active full">
           <div class="content" style="padding:0;grid-template-columns:0.85fr 1.15fr;">
             <div class="card">
-              <h3>Add Portfolio Item</h3>
+              <h3 id="portfolioFormTitle">Add Portfolio Item</h3>
 
               <div class="note">
                 For images: upload a photo. For video: paste a Google Drive, YouTube, or Vimeo link. You can also add both if you want an image thumbnail with a video link.
               </div>
 
               <form id="portfolioForm">
+                <input id="portfolioEditId" type="hidden" />
+                <input id="currentImageUrl" type="hidden" />
+
+                <div id="portfolioEditNote" class="edit-mode-note">
+                  Editing portfolio item. Upload a new image only if you want to replace the existing image.
+                </div>
+
                 <div class="form-grid">
                   <div class="full">
                     <label for="title">Project Title</label>
@@ -642,6 +670,7 @@
                   <div class="full">
                     <label for="imageFile">Upload Image</label>
                     <input id="imageFile" type="file" accept="image/*" />
+                    <div id="currentImageNote" class="current-image-note">Current uploaded image will be kept if you do not choose a new file.</div>
                   </div>
 
                   <div class="full">
@@ -668,6 +697,7 @@
 
                   <div class="full">
                     <button id="saveBtn" class="btn-full" type="submit">Save Portfolio Item</button>
+                    <button id="cancelPortfolioEditBtn" class="btn-full btn-outline hidden" type="button" style="margin-top:10px;">Cancel Edit</button>
                   </div>
                 </div>
               </form>
@@ -677,7 +707,7 @@
 
             <div class="card">
               <h3>Current Portfolio Items</h3>
-              <p>These are the latest items saved in your Supabase table. Delete will also remove uploaded Supabase images from Storage.</p>
+              <p>These are the portfolio items saved in Supabase. Use Edit to update details, and Move Up/Down to control the public website order. Delete will also remove uploaded Supabase images from Storage.</p>
 
               <div id="itemsList" class="items">
                 <p>Loading portfolio items...</p>
@@ -851,6 +881,12 @@
     const imagePreview = document.getElementById("imagePreview");
     const previewText = document.getElementById("previewText");
     const itemsList = document.getElementById("itemsList");
+    const portfolioEditId = document.getElementById("portfolioEditId");
+    const currentImageUrl = document.getElementById("currentImageUrl");
+    const portfolioFormTitle = document.getElementById("portfolioFormTitle");
+    const portfolioEditNote = document.getElementById("portfolioEditNote");
+    const currentImageNote = document.getElementById("currentImageNote");
+    const cancelPortfolioEditBtn = document.getElementById("cancelPortfolioEditBtn");
     const tabButtons = document.querySelectorAll(".tab-btn");
     const tabSections = document.querySelectorAll(".tab-section");
     const bookingRequestsList = document.getElementById("bookingRequestsList");
@@ -948,6 +984,10 @@
       setStatus(loginStatus, "Logged out.");
     });
 
+    if (cancelPortfolioEditBtn) {
+      cancelPortfolioEditBtn.addEventListener("click", resetPortfolioForm);
+    }
+
     imageFile.addEventListener("change", function () {
       const file = imageFile.files[0];
 
@@ -993,7 +1033,7 @@
       event.preventDefault();
 
       saveBtn.disabled = true;
-      setStatus(uploadStatus, "Saving portfolio item...");
+      setStatus(uploadStatus, portfolioEditId.value ? "Updating portfolio item..." : "Saving portfolio item...");
 
       try {
         const title = document.getElementById("title").value.trim();
@@ -1005,51 +1045,60 @@
         const isVisible = document.getElementById("isVisible").checked;
         const file = imageFile.files[0];
 
-        if (!title) {
-          throw new Error("Please enter a project title.");
-        }
+        if (!title) throw new Error("Please enter a project title.");
 
-        if (mediaType === "image" && !file) {
+        if (!portfolioEditId.value && mediaType === "image" && !file) {
           throw new Error("Please upload an image for image portfolio item.");
         }
 
-        if (mediaType === "video" && !videoUrl && !file) {
+        if (!portfolioEditId.value && mediaType === "video" && !videoUrl && !file) {
           throw new Error("For video item, add a video URL or upload an image thumbnail.");
         }
 
-        let imageUrl = null;
+        let imageUrl = currentImageUrl.value || null;
 
         if (file) {
           setStatus(uploadStatus, "Uploading image to Supabase Storage...");
           imageUrl = await uploadImage(file);
         }
 
-        setStatus(uploadStatus, "Saving details into portfolio_items table...");
+        const payload = {
+          title,
+          description,
+          category,
+          media_type: mediaType,
+          image_url: imageUrl,
+          video_url: videoUrl || null,
+          is_featured: isFeatured,
+          is_visible: isVisible
+        };
 
-        const { error: insertError } = await supabaseClient
-          .from("portfolio_items")
-          .insert({
-            title,
-            description,
-            category,
-            media_type: mediaType,
-            image_url: imageUrl,
-            video_url: videoUrl || null,
-            is_featured: isFeatured,
-            is_visible: isVisible
-          });
+        if (portfolioEditId.value) {
+          setStatus(uploadStatus, "Updating details in portfolio_items table...");
 
-        if (insertError) {
-          throw insertError;
+          const { error: updateError } = await supabaseClient
+            .from("portfolio_items")
+            .update(payload)
+            .eq("id", portfolioEditId.value);
+
+          if (updateError) throw updateError;
+
+          resetPortfolioForm();
+          setStatus(uploadStatus, "Portfolio item updated successfully.", "success");
+        } else {
+          setStatus(uploadStatus, "Saving details into portfolio_items table...");
+          payload.display_order = await getNextPortfolioOrder();
+
+          const { error: insertError } = await supabaseClient
+            .from("portfolio_items")
+            .insert(payload);
+
+          if (insertError) throw insertError;
+
+          resetPortfolioForm();
+          setStatus(uploadStatus, "Portfolio item saved successfully.", "success");
         }
 
-        portfolioForm.reset();
-        imagePreview.src = "";
-        imagePreview.style.display = "none";
-        previewText.style.display = "block";
-        document.getElementById("isVisible").checked = true;
-
-        setStatus(uploadStatus, "Portfolio item saved successfully.", "success");
         await loadPortfolioItems();
       } catch (error) {
         setStatus(uploadStatus, error.message || "Something went wrong.", "error");
@@ -1058,14 +1107,44 @@
       }
     });
 
+    async function getNextPortfolioOrder() {
+      const { data, error } = await supabaseClient
+        .from("portfolio_items")
+        .select("display_order")
+        .order("display_order", { ascending: false, nullsFirst: false })
+        .limit(1);
+
+      if (error || !data || data.length === 0 || data[0].display_order === null) {
+        return Date.now();
+      }
+
+      return Number(data[0].display_order) + 1;
+    }
+
+    function resetPortfolioForm() {
+      portfolioForm.reset();
+      portfolioEditId.value = "";
+      currentImageUrl.value = "";
+      imagePreview.src = "";
+      imagePreview.style.display = "none";
+      previewText.style.display = "block";
+      document.getElementById("isVisible").checked = true;
+      portfolioFormTitle.textContent = "Add Portfolio Item";
+      saveBtn.textContent = "Save Portfolio Item";
+      cancelPortfolioEditBtn.classList.add("hidden");
+      portfolioEditNote.classList.remove("active");
+      currentImageNote.classList.remove("active");
+    }
+
     async function loadPortfolioItems() {
       itemsList.innerHTML = "<p>Loading portfolio items...</p>";
 
       const { data, error } = await supabaseClient
         .from("portfolio_items")
         .select("*")
+        .order("display_order", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(100);
 
       if (error) {
         itemsList.innerHTML = `<p style="color:#ff5a5a;">${error.message}</p>`;
@@ -1094,9 +1173,12 @@
               <span class="badge">${escapeHtml(item.category || "Other")}</span>
               <span class="badge">${escapeHtml(item.media_type || "image")}</span>
               <span class="badge">${visible}</span>
-              <span class="badge">${featured}</span>
+              <span class="badge">${featured}</span>\n              <span class="badge">Order ${item.display_order ?? "-"}</span>
 
               <div class="item-actions">
+                <button type="button" class="btn-outline" onclick="editPortfolioItem('${item.id}')">
+                  Edit
+                </button>
                 <button type="button" class="btn-outline" onclick="toggleVisibility('${item.id}', ${item.is_visible})">
                   ${item.is_visible ? "Hide" : "Show"}
                 </button>
@@ -1104,11 +1186,118 @@
                   Delete
                 </button>
               </div>
+
+              <div class="order-controls">
+                <button type="button" class="btn-outline" onclick="movePortfolioItem('${item.id}', 'up')">↑ Move Up</button>
+                <button type="button" class="btn-outline" onclick="movePortfolioItem('${item.id}', 'down')">↓ Move Down</button>
+              </div>
             </div>
           </article>
         `;
       }).join("");
     }
+
+
+    async function editPortfolioItem(id) {
+      setStatus(uploadStatus, "Loading portfolio item for editing...");
+
+      const { data, error } = await supabaseClient
+        .from("portfolio_items")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        setStatus(uploadStatus, error.message, "error");
+        return;
+      }
+
+      portfolioEditId.value = data.id;
+      currentImageUrl.value = data.image_url || "";
+      document.getElementById("title").value = data.title || "";
+      document.getElementById("description").value = data.description || "";
+      document.getElementById("category").value = data.category || "Other";
+      document.getElementById("mediaType").value = data.media_type || "image";
+      document.getElementById("videoUrl").value = data.video_url || "";
+      document.getElementById("isFeatured").checked = Boolean(data.is_featured);
+      document.getElementById("isVisible").checked = Boolean(data.is_visible);
+
+      imagePreview.src = data.image_url || "";
+      imagePreview.style.display = data.image_url ? "block" : "none";
+      previewText.style.display = data.image_url ? "none" : "block";
+
+      portfolioFormTitle.textContent = "Edit Portfolio Item";
+      saveBtn.textContent = "Update Portfolio Item";
+      cancelPortfolioEditBtn.classList.remove("hidden");
+      portfolioEditNote.classList.add("active");
+      currentImageNote.classList.add("active");
+
+      setStatus(uploadStatus, "Editing portfolio item. Save to update.", "success");
+      document.getElementById("title").focus();
+    }
+
+    async function movePortfolioItem(id, direction) {
+      setStatus(uploadStatus, "Updating portfolio order...");
+
+      const { data, error } = await supabaseClient
+        .from("portfolio_items")
+        .select("id,display_order,created_at")
+        .order("display_order", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) {
+        setStatus(uploadStatus, error.message, "error");
+        return;
+      }
+
+      const items = data || [];
+      const currentIndex = items.findIndex(item => item.id === id);
+
+      if (currentIndex === -1) {
+        setStatus(uploadStatus, "Portfolio item not found.", "error");
+        return;
+      }
+
+      const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+      if (targetIndex < 0 || targetIndex >= items.length) {
+        setStatus(uploadStatus, direction === "up" ? "This item is already at the top." : "This item is already at the bottom.", "error");
+        return;
+      }
+
+      const normalized = items.map((item, index) => ({
+        id: item.id,
+        display_order: item.display_order ?? (index + 1)
+      }));
+
+      const current = normalized[currentIndex];
+      const target = normalized[targetIndex];
+
+      const { error: currentError } = await supabaseClient
+        .from("portfolio_items")
+        .update({ display_order: target.display_order })
+        .eq("id", current.id);
+
+      if (currentError) {
+        setStatus(uploadStatus, currentError.message, "error");
+        return;
+      }
+
+      const { error: targetError } = await supabaseClient
+        .from("portfolio_items")
+        .update({ display_order: current.display_order })
+        .eq("id", target.id);
+
+      if (targetError) {
+        setStatus(uploadStatus, targetError.message, "error");
+        return;
+      }
+
+      setStatus(uploadStatus, "Portfolio order updated.", "success");
+      loadPortfolioItems();
+    }
+
 
     async function toggleVisibility(id, currentVisibility) {
       const { error } = await supabaseClient
