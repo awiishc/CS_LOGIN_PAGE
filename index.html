@@ -279,7 +279,67 @@
       height: 100%;
       max-height: 360px;
       object-fit: cover;
+      object-position: center center;
       display: none;
+    }
+
+    .position-controls {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.045);
+    }
+
+    .position-controls .control-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .position-controls .control-head label {
+      margin-bottom: 0;
+    }
+
+    .position-value {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.03em;
+    }
+
+    .range-row {
+      display: grid;
+      grid-template-columns: 70px 1fr 46px;
+      align-items: center;
+      gap: 10px;
+      color: #bbb;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .range-row input[type="range"] {
+      min-height: auto;
+      margin: 0;
+      padding: 0;
+      accent-color: var(--accent);
+    }
+
+    .range-row output {
+      text-align: right;
+      color: #ddd;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .position-help {
+      margin: 0;
+      color: #888;
+      font-size: 12px;
+      line-height: 1.5;
     }
 
     .items {
@@ -681,6 +741,42 @@
                   </div>
 
                   <div class="full">
+                    <div class="position-controls">
+                      <div class="control-head">
+                        <label for="imagePositionPreset">Portfolio Image Position</label>
+                        <span id="imagePositionValue" class="position-value">50% 50%</span>
+                      </div>
+
+                      <select id="imagePositionPreset">
+                        <option value="50% 50%">Center</option>
+                        <option value="50% 0%">Top Center</option>
+                        <option value="50% 100%">Bottom Center</option>
+                        <option value="0% 50%">Left Center</option>
+                        <option value="100% 50%">Right Center</option>
+                        <option value="0% 0%">Top Left</option>
+                        <option value="100% 0%">Top Right</option>
+                        <option value="0% 100%">Bottom Left</option>
+                        <option value="100% 100%">Bottom Right</option>
+                        <option value="custom">Custom</option>
+                      </select>
+
+                      <div class="range-row">
+                        <span>X Position</span>
+                        <input id="imagePositionX" type="range" min="0" max="100" value="50" />
+                        <output id="imagePositionXOutput">50%</output>
+                      </div>
+
+                      <div class="range-row">
+                        <span>Y Position</span>
+                        <input id="imagePositionY" type="range" min="0" max="100" value="50" />
+                        <output id="imagePositionYOutput">50%</output>
+                      </div>
+
+                      <p class="position-help">Adjust this while viewing the preview. It controls how the image is cropped on the public portfolio cards.</p>
+                    </div>
+                  </div>
+
+                  <div class="full">
                     <label for="videoUrl">Video URL</label>
                     <input id="videoUrl" type="url" placeholder="Google Drive / YouTube / Vimeo link" />
                   </div>
@@ -880,6 +976,12 @@
     const imageFile = document.getElementById("imageFile");
     const imagePreview = document.getElementById("imagePreview");
     const previewText = document.getElementById("previewText");
+    const imagePositionPreset = document.getElementById("imagePositionPreset");
+    const imagePositionX = document.getElementById("imagePositionX");
+    const imagePositionY = document.getElementById("imagePositionY");
+    const imagePositionXOutput = document.getElementById("imagePositionXOutput");
+    const imagePositionYOutput = document.getElementById("imagePositionYOutput");
+    const imagePositionValue = document.getElementById("imagePositionValue");
     const itemsList = document.getElementById("itemsList");
     const portfolioEditId = document.getElementById("portfolioEditId");
     const currentImageUrl = document.getElementById("currentImageUrl");
@@ -922,6 +1024,92 @@
       element.textContent = message;
       element.className = "status";
       if (type) element.classList.add(type);
+    }
+
+    function getImagePosition() {
+      const x = imagePositionX ? Number(imagePositionX.value || 50) : 50;
+      const y = imagePositionY ? Number(imagePositionY.value || 50) : 50;
+      return `${x}% ${y}%`;
+    }
+
+    function parseImagePosition(value) {
+      const fallback = { x: 50, y: 50 };
+      if (!value || typeof value !== "string") return fallback;
+
+      const parts = value.trim().split(/\s+/);
+      if (parts.length < 2) return fallback;
+
+      const x = Number(String(parts[0]).replace("%", ""));
+      const y = Number(String(parts[1]).replace("%", ""));
+
+      return {
+        x: Number.isFinite(x) ? Math.min(100, Math.max(0, x)) : fallback.x,
+        y: Number.isFinite(y) ? Math.min(100, Math.max(0, y)) : fallback.y
+      };
+    }
+
+    function setImagePosition(value) {
+      const parsed = parseImagePosition(value);
+      if (imagePositionX) imagePositionX.value = parsed.x;
+      if (imagePositionY) imagePositionY.value = parsed.y;
+      updateImagePositionPreview();
+    }
+
+    function updateImagePositionPreview() {
+      const position = getImagePosition();
+
+      if (imagePreview) {
+        imagePreview.style.objectPosition = position;
+      }
+
+      if (imagePositionValue) {
+        imagePositionValue.textContent = position;
+      }
+
+      if (imagePositionXOutput) {
+        imagePositionXOutput.textContent = `${imagePositionX.value}%`;
+      }
+
+      if (imagePositionYOutput) {
+        imagePositionYOutput.textContent = `${imagePositionY.value}%`;
+      }
+
+      if (imagePositionPreset) {
+        const matchingOption = Array.from(imagePositionPreset.options).some(option => option.value === position);
+        imagePositionPreset.value = matchingOption ? position : "custom";
+      }
+    }
+
+    function bindImagePositionControls() {
+      if (imagePositionPreset) {
+        imagePositionPreset.addEventListener("change", function() {
+          if (imagePositionPreset.value !== "custom") {
+            setImagePosition(imagePositionPreset.value);
+          }
+        });
+      }
+
+      if (imagePositionX) {
+        imagePositionX.addEventListener("input", updateImagePositionPreview);
+      }
+
+      if (imagePositionY) {
+        imagePositionY.addEventListener("input", updateImagePositionPreview);
+      }
+
+      updateImagePositionPreview();
+    }
+
+    function getPortfolioColumnErrorMessage(error) {
+      const rawMessage = String(error && error.message ? error.message : "");
+      const rawDetails = String(error && error.details ? error.details : "");
+      const combined = `${rawMessage} ${rawDetails}`.toLowerCase();
+
+      if (combined.includes("image_position") || combined.includes("schema cache")) {
+        return "The admin position control is ready, but your Supabase portfolio_items table needs a text column named image_position. Add that column, then save again.";
+      }
+
+      return error.message || "Something went wrong.";
     }
 
     function showLogin() {
@@ -988,6 +1176,8 @@
       cancelPortfolioEditBtn.addEventListener("click", resetPortfolioForm);
     }
 
+    bindImagePositionControls();
+
     imageFile.addEventListener("change", function () {
       const file = imageFile.files[0];
 
@@ -1001,6 +1191,7 @@
       imagePreview.src = objectUrl;
       imagePreview.style.display = "block";
       previewText.style.display = "none";
+      updateImagePositionPreview();
     });
 
     async function uploadImage(file) {
@@ -1069,6 +1260,7 @@
           media_type: mediaType,
           image_url: imageUrl,
           video_url: videoUrl || null,
+          image_position: getImagePosition(),
           is_featured: isFeatured,
           is_visible: isVisible
         };
@@ -1101,7 +1293,7 @@
 
         await loadPortfolioItems();
       } catch (error) {
-        setStatus(uploadStatus, error.message || "Something went wrong.", "error");
+        setStatus(uploadStatus, getPortfolioColumnErrorMessage(error), "error");
       } finally {
         saveBtn.disabled = false;
       }
@@ -1127,7 +1319,9 @@
       currentImageUrl.value = "";
       imagePreview.src = "";
       imagePreview.style.display = "none";
+      imagePreview.style.objectPosition = "50% 50%";
       previewText.style.display = "block";
+      setImagePosition("50% 50%");
       document.getElementById("isVisible").checked = true;
       portfolioFormTitle.textContent = "Add Portfolio Item";
       saveBtn.textContent = "Save Portfolio Item";
@@ -1157,8 +1351,9 @@
       }
 
       itemsList.innerHTML = data.map(function (item) {
+        const imagePosition = item.image_position || "50% 50%";
         const image = item.image_url
-          ? `<img src="${item.image_url}" alt="${escapeHtml(item.title)}">`
+          ? `<img src="${item.image_url}" alt="${escapeHtml(item.title)}" style="object-position:${escapeHtml(imagePosition)};">`
           : "";
 
         const visible = item.is_visible ? "Visible" : "Hidden";
@@ -1173,7 +1368,8 @@
               <span class="badge">${escapeHtml(item.category || "Other")}</span>
               <span class="badge">${escapeHtml(item.media_type || "image")}</span>
               <span class="badge">${visible}</span>
-              <span class="badge">${featured}</span>\n              <span class="badge">Order ${item.display_order ?? "-"}</span>
+              <span class="badge">${featured}</span>
+              <span class="badge">Position ${escapeHtml(imagePosition)}</span>\n              <span class="badge">Order ${item.display_order ?? "-"}</span>
 
               <div class="item-actions">
                 <button type="button" class="btn-outline" onclick="editPortfolioItem('${item.id}')">
@@ -1225,6 +1421,7 @@
       imagePreview.src = data.image_url || "";
       imagePreview.style.display = data.image_url ? "block" : "none";
       previewText.style.display = data.image_url ? "none" : "block";
+      setImagePosition(data.image_position || "50% 50%");
 
       portfolioFormTitle.textContent = "Edit Portfolio Item";
       saveBtn.textContent = "Update Portfolio Item";
